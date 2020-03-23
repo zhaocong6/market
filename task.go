@@ -9,6 +9,7 @@ import (
 )
 
 const runIng = 1
+const workerListGcTime = 2
 
 type (
 	Handler interface {
@@ -49,6 +50,24 @@ func (w *Worker) RunTask() {
 	w.listenHandle()
 }
 
+func dial(u string) (*websocket.Conn, error) {
+RETRY:
+	uProxy, _ := url.Parse("http://127.0.0.1:12333")
+
+	websocket.DefaultDialer = &websocket.Dialer{
+		Proxy:            http.ProxyURL(uProxy),
+		HandshakeTimeout: 10 * time.Second,
+	}
+
+	conn, _, err := websocket.DefaultDialer.Dial(u, nil)
+	if err != nil {
+		time.Sleep(time.Second * 3)
+		goto RETRY
+	}
+
+	return conn, nil
+}
+
 func (w *Worker) Subscribe(msg []byte) error {
 	if w.WsConn != nil {
 		err := w.WsConn.WriteMessage(websocket.TextMessage, msg)
@@ -85,6 +104,7 @@ func (w *Worker) subscribed(symbol string) {
 func (w *Worker) listenHandle() {
 	go w.handler.pingPongHandle(w)
 	go w.handler.resubscribeHandle(w)
+	go w.workerListGc()
 	for {
 		select {
 		case <-w.ctx.Done():
@@ -112,20 +132,11 @@ func (w *Worker) listenHandle() {
 	}
 }
 
-func dial(u string) (*websocket.Conn, error) {
-RETRY:
-	uProxy, _ := url.Parse("http://127.0.0.1:12333")
-
-	websocket.DefaultDialer = &websocket.Dialer{
-		Proxy:            http.ProxyURL(uProxy),
-		HandshakeTimeout: 10 * time.Second,
+func (w *Worker) workerListGc() {
+	for {
+		select {
+		case <-time.NewTimer(workerListGcTime * time.Second).C:
+			w.List.gc(workerListGcTime)
+		}
 	}
-
-	conn, _, err := websocket.DefaultDialer.Dial(u, nil)
-	if err != nil {
-		time.Sleep(time.Second * 3)
-		goto RETRY
-	}
-
-	return conn, nil
 }

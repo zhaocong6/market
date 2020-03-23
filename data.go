@@ -2,6 +2,7 @@ package market
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -59,6 +60,18 @@ func (l Lister) Find(s ...string) Lister {
 	}
 
 	return newL
+}
+
+func (l Lister) gc(exs time.Duration) {
+	t := time.Duration(time.Now().UnixNano() / 1e6)
+
+	for k, v := range l {
+		if (t - v.Timestamp) > exs {
+			delete(l, k)
+		}
+	}
+
+	fmt.Println("gc")
 }
 
 type marketType int
