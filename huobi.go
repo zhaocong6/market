@@ -65,14 +65,18 @@ func (h *huoBiHandler) pingPongHandle(w *Worker) {
 			now := time.Duration(time.Now().UnixNano() / 1e6)
 
 			if (now - h.pingLastTime) > huobiWsTimeout {
-				w.WsConn.Close()
+				if w.WsConn != nil {
+					w.WsConn.Close()
+				}
 			} else if (now - h.pingLastTime) > huobiWsPingTimeout {
 				pong, _ := json.Marshal(struct {
 					pong time.Duration
 				}{
 					pong: now,
 				})
-				w.WsConn.WriteMessage(websocket.TextMessage, pong)
+				if w.WsConn != nil {
+					w.WsConn.WriteMessage(websocket.TextMessage, pong)
+				}
 			}
 		}
 	}

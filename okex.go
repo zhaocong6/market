@@ -60,9 +60,13 @@ func (h *okexHandler) pingPongHandle(w *Worker) {
 		select {
 		case <-time.NewTimer(okexWsTimeout).C:
 			if (time.Duration(time.Now().UnixNano()/1e6) - h.pongLastTime) > okexWsTimeout {
-				w.WsConn.Close()
+				if w.WsConn != nil {
+					w.WsConn.Close()
+				}
 			} else {
-				w.WsConn.WriteMessage(websocket.TextMessage, []byte("ping"))
+				if w.WsConn != nil {
+					w.WsConn.WriteMessage(websocket.TextMessage, []byte("ping"))
+				}
 			}
 		}
 	}
