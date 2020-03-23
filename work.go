@@ -5,6 +5,9 @@ import (
 	"fmt"
 )
 
+//manage结构体
+//用于管理task任务, 和关闭task运行任务
+//使用context通信
 var Manage struct {
 	Tasks  map[Organize]*Worker
 	Ctx    context.Context
@@ -18,6 +21,7 @@ func init() {
 	Manage.Tasks[HuoBi] = newHuoBi(Manage.Ctx)
 }
 
+//运行work
 func Run() {
 	for _, t := range Manage.Tasks {
 
@@ -45,10 +49,13 @@ func Run() {
 	}()
 }
 
+//关闭task
+//使用context 通信
 func Close() {
 	Manage.Cancel()
 }
 
+//订阅请求统一处理
 func subscribeHandle() {
 	for {
 		select {

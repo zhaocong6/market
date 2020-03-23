@@ -58,17 +58,6 @@ func (h *huoBiHandler) subscribed(msg []byte, w *Worker) {
 	}
 }
 
-func (h *huoBiHandler) resubscribeHandle(w *Worker) {
-	for {
-		select {
-		case <-time.NewTimer(time.Second * 10).C:
-			for _, sub := range w.Subscribing {
-				w.Subscribe(sub)
-			}
-		}
-	}
-}
-
 func (h *huoBiHandler) pingPongHandle(w *Worker) {
 	for {
 		select {

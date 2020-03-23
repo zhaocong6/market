@@ -10,12 +10,18 @@ import (
 )
 
 const okexUrl = "wss://real.OKEx.com:8443/ws/v3"
+
+//ws连接超时时间
+//超过这个时间 服务器没有ping或者pong 将断开重连
 const okexWsTimeout = time.Second * 3
 
+//记录okex服务器最后pong时间
 type okexHandler struct {
 	pongLastTime time.Duration
 }
 
+//创建一个okex
+//该流程中没有创建ws连接
 func newOkEx(ctx context.Context) *Worker {
 	return &Worker{
 		ctx:   ctx,
@@ -33,6 +39,7 @@ func newOkEx(ctx context.Context) *Worker {
 	}
 }
 
+//对订阅数据进行格式化
 func (h *okexHandler) formatSubscribeHandle(s *Subscriber) (b []byte) {
 	switch s.MarketType {
 	case SpotMarket:
@@ -45,17 +52,9 @@ func (h *okexHandler) formatSubscribeHandle(s *Subscriber) (b []byte) {
 	return
 }
 
-func (h *okexHandler) resubscribeHandle(w *Worker) {
-	for {
-		select {
-		case <-time.NewTimer(time.Second * 5).C:
-			for _, sub := range w.Subscribing {
-				w.Subscribe(sub)
-			}
-		}
-	}
-}
-
+//ping pong检测
+//超过规定时间, okex服务器没有返回pong 就断开了连接
+//满足pong后 向okex服务器发出ping请求
 func (h *okexHandler) pingPongHandle(w *Worker) {
 	for {
 		select {
@@ -69,6 +68,8 @@ func (h *okexHandler) pingPongHandle(w *Worker) {
 	}
 }
 
+//对okex返回数据进行格式化
+//目前只处理二进制数据, okex返回其他数据不处理
 func (h *okexHandler) formatMsgHandle(msgType int, msg []byte, w *Worker) (*Marketer, error) {
 	switch msgType {
 	case websocket.BinaryMessage:
@@ -90,16 +91,19 @@ func (h *okexHandler) formatMsgHandle(msgType int, msg []byte, w *Worker) (*Mark
 	}
 }
 
+//okex josn结构体
 type okexProvider struct {
-	Table string `json:"table"`
+	Table string `json:"table"` //订阅类型和深度
 	Data  []struct {
-		Asks         Depth     `json:"asks"`
-		Bids         Depth     `json:"bids"`
-		InstrumentId string    `json:"instrument_id"`
-		Timestamp    time.Time `json:"timestamp"`
+		Asks         Depth     `json:"asks"`          //卖方深度
+		Bids         Depth     `json:"bids"`          //买方深度
+		InstrumentId string    `json:"instrument_id"` //合约或者币对
+		Timestamp    time.Time `json:"timestamp"`     //数据时间戳(毫秒)
 	} `json:"data"`
 }
 
+//解析json数据
+//判断是否是深度数据
 func (h *okexHandler) marketerMsg(msg []byte) (*Marketer, error) {
 	okexData := &okexProvider{}
 	err := json.Unmarshal(msg, okexData)
@@ -114,6 +118,7 @@ func (h *okexHandler) marketerMsg(msg []byte) (*Marketer, error) {
 	return h.newMarketer(okexData)
 }
 
+//将深度数据转换成统一的行情数据
 func (h *okexHandler) newMarketer(p *okexProvider) (*Marketer, error) {
 	return &Marketer{
 		Organize:  OkEx,
@@ -126,17 +131,21 @@ func (h *okexHandler) newMarketer(p *okexProvider) (*Marketer, error) {
 	}, nil
 }
 
+//验证是否是pong数据
 func (h *okexHandler) pongMsg(msg []byte) {
 	if string(msg) == "pong" {
 		h.pongLastTime = time.Duration(time.Now().UnixNano() / 1e6)
 	}
 }
 
+//订阅消息结构体
 type okexSubscriber struct {
 	Event   string `json:"event"`
 	Channel string `json:"channel"`
 }
 
+//验证是否是订阅成功消息
+//订阅成功后处理数据
 func (h *okexHandler) subscribed(msg []byte, w *Worker) {
 	subscribe := &okexSubscriber{}
 	json.Unmarshal(msg, subscribe)
