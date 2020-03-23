@@ -2,7 +2,6 @@ package market
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 )
@@ -70,8 +69,6 @@ func (l Lister) gc(exs time.Duration) {
 			delete(l, k)
 		}
 	}
-
-	fmt.Println("gc")
 }
 
 type marketType int
