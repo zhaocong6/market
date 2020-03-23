@@ -141,6 +141,11 @@ func (w *Worker) listenHandle() {
 			return
 		default:
 			//等待ws数据
+			if w.WsConn == nil {
+				time.Sleep(time.Millisecond * 200)
+				break
+			}
+
 			msgType, msg, err := w.WsConn.ReadMessage()
 			if err != nil {
 				err = w.closeRedialSub()
