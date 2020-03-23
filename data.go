@@ -20,6 +20,7 @@ func (d Depth) formatFloat(params [][2]float64) Depth {
 }
 
 type Marketer struct {
+	Organize  Organize      `json:"organize"`
 	Symbol    string        `json:"symbol"`
 	BuyFirst  string        `json:"buy_first"`
 	SellFirst string        `json:"sell_first"`
@@ -85,4 +86,30 @@ func init() {
 	var subscribing = make(chan *Subscriber, 2)
 	WriteSubscribing = subscribing
 	readSubscribing = subscribing
+}
+
+type readMarketer <-chan *Marketer
+type writeMarketer chan<- *Marketer
+
+var ReadMarketPool readMarketer
+var writeMarketPool writeMarketer
+
+func init() {
+	m := make(chan *Marketer, 1000)
+	ReadMarketPool = m
+	writeMarketPool = m
+}
+
+func (w writeMarketer) writeRingBuffer(m *Marketer) {
+	t := time.NewTimer(time.Millisecond)
+	defer t.Stop()
+
+	go func() {
+		select {
+		case <-t.C:
+			<-ReadMarketPool
+		}
+	}()
+
+	w <- m
 }

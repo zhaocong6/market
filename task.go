@@ -2,14 +2,12 @@ package market
 
 import (
 	"context"
-	"errors"
 	"github.com/gorilla/websocket"
 	"net/http"
 	"net/url"
 	"time"
 )
 
-const maxRetryNum = 10
 const runIng = 1
 
 type (
@@ -108,19 +106,14 @@ func (w *Worker) listenHandle() {
 			data, err := w.handler.formatMsgHandle(msgType, msg, w)
 			if data != nil {
 				w.List.Add(data.Symbol, data)
+				writeMarketPool.writeRingBuffer(data)
 			}
 		}
 	}
 }
 
 func dial(u string) (*websocket.Conn, error) {
-	var retryNum int
-
 RETRY:
-	if retryNum > maxRetryNum {
-		return nil, errors.New("connect fail")
-	}
-
 	uProxy, _ := url.Parse("http://127.0.0.1:12333")
 
 	websocket.DefaultDialer = &websocket.Dialer{
@@ -130,8 +123,7 @@ RETRY:
 
 	conn, _, err := websocket.DefaultDialer.Dial(u, nil)
 	if err != nil {
-		retryNum++
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * 3)
 		goto RETRY
 	}
 

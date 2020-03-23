@@ -148,6 +148,7 @@ func (h *huoBiHandler) marketerMsg(msg []byte) (*Marketer, error) {
 
 func (h *huoBiHandler) newMarketer(p *huobiProvider) (*Marketer, error) {
 	return &Marketer{
+		Organize:  HuoBi,
 		Symbol:    p.Symbol,
 		BuyFirst:  p.Tick.bidsDepth[0][0],
 		SellFirst: p.Tick.asksDepth[0][0],

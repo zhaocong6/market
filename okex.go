@@ -116,6 +116,7 @@ func (h *okexHandler) marketerMsg(msg []byte) (*Marketer, error) {
 
 func (h *okexHandler) newMarketer(p *okexProvider) (*Marketer, error) {
 	return &Marketer{
+		Organize:  OkEx,
 		Symbol:    p.Data[0].InstrumentId,
 		BuyFirst:  p.Data[0].Bids[0][0],
 		SellFirst: p.Data[0].Asks[0][0],

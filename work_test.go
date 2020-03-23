@@ -3,7 +3,6 @@ package market
 import (
 	"fmt"
 	"testing"
-	"time"
 )
 
 func Test_Run(t *testing.T) {
@@ -25,8 +24,9 @@ func Test_Run(t *testing.T) {
 	WriteSubscribing <- h
 
 	for {
-		time.Sleep(time.Second)
-		fmt.Println(Manage.Tasks[OkEx].List.Find("ETH-USDT"))
-		fmt.Println(Manage.Tasks[HuoBi].List.Find("ethusdt"))
+		select {
+		case sub := <-ReadMarketPool:
+			fmt.Println(sub)
+		}
 	}
 }
