@@ -139,11 +139,12 @@ type readMarketer <-chan *Marketer
 //只允许写入market channel
 type writeMarketer struct {
 	buffer chan<- *Marketer
-	lock   *chanlock.ChanLock
+	lock   chanlock.ChanLock
 }
 
+var readWriteMarketer = make(chan *Marketer, 1000)
 //读取暴露给外部使用
-var ReadMarketPool readMarketer
+var ReadMarketPool readMarketer = readWriteMarketer
 
 //写入数据只能内部使用
 var writeMarketPool struct {
@@ -151,10 +152,7 @@ var writeMarketPool struct {
 }
 
 func init() {
-	m := make(chan *Marketer, 1000)
-	ReadMarketPool = m
-	writeMarketPool.buffer = m
-	writeMarketPool.lock = chanlock.NewLock()
+	writeMarketPool.buffer = readWriteMarketer
 }
 
 //使用channel对market实现环形数据结构
