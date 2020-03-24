@@ -61,3 +61,13 @@ func Test_WriteSubscribing(t *testing.T) {
 		Manage.Tasks[sub.Organize].subscribeHandle(sub)
 	}
 }
+
+func Test_WriteRingBuffer(t *testing.T) {
+	m := NewTestMarketer()
+
+	go func() {
+		writeMarketPool.writeRingBuffer(m)
+	}()
+
+	fmt.Println(<-ReadMarketPool)
+}

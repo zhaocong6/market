@@ -2,6 +2,7 @@ package market
 
 import (
 	"encoding/json"
+	"github.com/zhaocong6/goUtils/chanlock"
 	"strconv"
 	"time"
 )
@@ -136,33 +137,45 @@ func init() {
 type readMarketer <-chan *Marketer
 
 //只允许写入market channel
-type writeMarketer chan<- *Marketer
+type writeMarketer struct {
+	buffer chan<- *Marketer
+	lock   *chanlock.ChanLock
+}
 
 //读取暴露给外部使用
 var ReadMarketPool readMarketer
 
 //写入数据只能内部使用
-var writeMarketPool writeMarketer
+var writeMarketPool struct {
+	writeMarketer
+}
 
 func init() {
 	m := make(chan *Marketer, 1000)
 	ReadMarketPool = m
-	writeMarketPool = m
+	writeMarketPool.buffer = m
+	writeMarketPool.lock = chanlock.NewLock()
 }
 
 //使用channel对market实现环形数据结构
 //超过channel缓存时, 删除过期的值
 //主动停止timer, 防止可能的内存泄露
 func (w writeMarketer) writeRingBuffer(m *Marketer) {
-	t := time.NewTimer(time.Millisecond)
-	defer t.Stop()
-
-	go func() {
-		select {
-		case <-t.C:
-			<-ReadMarketPool
-		}
+	w.lock.Lock()
+	defer func() {
+		w.lock.Unlock()
 	}()
 
-	w <- m
+	if len(w.buffer) == cap(w.buffer) {
+		t := time.NewTimer(time.Millisecond)
+		defer t.Stop()
+
+		select {
+		case <-t.C:
+		case <-ReadMarketPool:
+		}
+		return
+	}
+
+	w.buffer <- m
 }
