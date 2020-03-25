@@ -3,6 +3,7 @@ package market
 import (
 	"context"
 	"fmt"
+	"github.com/zhaocong6/goUtils/goroutinepool"
 )
 
 //manage结构体
@@ -12,10 +13,17 @@ var Manage struct {
 	Tasks  map[Organize]*Worker
 	Ctx    context.Context
 	Cancel context.CancelFunc
+	pool   *goroutinepool.Worker
 }
 
 func init() {
 	Manage.Ctx, Manage.Cancel = context.WithCancel(context.Background())
+
+	Manage.pool = goroutinepool.NewPool(goroutinepool.Options{
+		Capacity:  20,
+		JobBuffer: 1000,
+	})
+
 	Manage.Tasks = map[Organize]*Worker{}
 	Manage.Tasks[OkEx] = newOkEx(Manage.Ctx)
 	Manage.Tasks[HuoBi] = newHuoBi(Manage.Ctx)

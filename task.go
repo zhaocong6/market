@@ -37,6 +37,12 @@ type (
 		List             Lister            //订阅成功返回后的行情数据list
 		handler          Handler           //handel接口
 	}
+
+	coJob struct {
+		w       *Worker
+		msgType int
+		msg     []byte
+	}
 )
 
 //运行task
@@ -159,14 +165,11 @@ func (w *Worker) listenHandle() {
 				}
 			}
 
-			//拷贝两份指针
-			//list用于被动查询
-			//pool用于主动通信
-			data, err := w.handler.formatMsgHandle(msgType, msg, w)
-			if data != nil {
-				w.List.Add(data.Symbol, data)
-				writeMarketPool.writeRingBuffer(data)
-			}
+			Manage.pool.Put(&coJob{
+				w:       w,
+				msgType: msgType,
+				msg:     msg,
+			})
 		}
 	}
 }
@@ -179,4 +182,20 @@ func (w *Worker) workerListGc() {
 			w.List.gc(workerListGcTime)
 		}
 	}
+}
+
+func (c coJob) Handle() error {
+	data, err := c.w.handler.formatMsgHandle(c.msgType, c.msg, c.w)
+	if err != nil {
+		return err
+	}
+
+	//拷贝两份指针
+	//list用于被动查询
+	//pool用于主动通信
+	if data != nil {
+		c.w.List.Add(data.Symbol, data)
+		writeMarketPool.writeRingBuffer(data)
+	}
+	return nil
 }

@@ -44,8 +44,13 @@ func (m *Marketer) MarshalJson() string {
 //主要为了实现主动查询
 type Lister map[string]*Marketer
 
+var listLock chanlock.ChanLock
+
 //序列化为json
 func (l Lister) MarshalJson() string {
+	listLock.Lock()
+	defer listLock.Unlock()
+
 	j, _ := json.Marshal(l)
 	return string(j)
 }
@@ -53,11 +58,17 @@ func (l Lister) MarshalJson() string {
 //追加一条数据
 //如果数据已经存在, 则更新数据
 func (l Lister) Add(k string, m *Marketer) {
+	listLock.Lock()
+	defer listLock.Unlock()
+
 	l[k] = m
 }
 
 //删除一条数据
 func (l Lister) Del(k string) {
+	listLock.Lock()
+	defer listLock.Unlock()
+
 	delete(l, k)
 }
 
@@ -83,7 +94,7 @@ func (l Lister) gc(exs time.Duration) {
 
 	for k, v := range l {
 		if (t - v.Timestamp) > exs {
-			delete(l, k)
+			l.Del(k)
 		}
 	}
 }
@@ -143,6 +154,7 @@ type writeMarketer struct {
 }
 
 var readWriteMarketer = make(chan *Marketer, 1000)
+
 //读取暴露给外部使用
 var ReadMarketPool readMarketer = readWriteMarketer
 
