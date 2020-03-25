@@ -2,8 +2,8 @@ package market
 
 import (
 	"encoding/json"
-	"github.com/zhaocong6/goUtils/chanlock"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -44,7 +44,7 @@ func (m *Marketer) MarshalJson() string {
 //主要为了实现主动查询
 type Lister map[string]*Marketer
 
-var listLock chanlock.ChanLock
+var listLock sync.Mutex
 
 //序列化为json
 func (l Lister) MarshalJson() string {
@@ -150,7 +150,7 @@ type readMarketer <-chan *Marketer
 //只允许写入market channel
 type writeMarketer struct {
 	buffer chan<- *Marketer
-	lock   chanlock.ChanLock
+	lock   sync.Mutex
 }
 
 var readWriteMarketer = make(chan *Marketer, 1000)
