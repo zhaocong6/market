@@ -177,14 +177,14 @@ func (w writeMarketer) writeRingBuffer(m *Marketer) {
 	}()
 
 	if len(w.buffer) == cap(w.buffer) {
-		t := time.NewTimer(time.Millisecond)
+		t := time.NewTimer(time.Millisecond * 1)
 		defer t.Stop()
 
 		select {
 		case <-t.C:
+			break
 		case <-ReadMarketPool:
 		}
-		return
 	}
 
 	w.buffer <- m
