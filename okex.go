@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gorilla/websocket"
+	"log"
 	"strings"
 	"time"
 )
@@ -13,11 +14,12 @@ const okexUrl = "wss://real.OKEx.com:8443/ws/v3"
 
 //ws连接超时时间
 //超过这个时间 服务器没有ping或者pong 将断开重连
-const okexWsTimeout = time.Second * 3
+const okexWsTimeout int64 = 3
+const okexWsPingTimeout int64 = 10
 
 //记录okex服务器最后pong时间
 type okexHandler struct {
-	pongLastTime time.Duration
+	pongLastTime int64
 }
 
 //创建一个okex
@@ -27,7 +29,7 @@ func newOkEx(ctx context.Context) *Worker {
 		ctx:   ctx,
 		wsUrl: okexUrl,
 		handler: &okexHandler{
-			pongLastTime: time.Duration(time.Now().UnixNano() / 1e6),
+			pongLastTime: time.Now().Unix(),
 		},
 		Organize:         OkEx,
 		Status:           runIng,
@@ -58,15 +60,12 @@ func (h *okexHandler) formatSubscribeHandle(s *Subscriber) (b []byte) {
 func (h *okexHandler) pingPongHandle(w *Worker) {
 	for {
 		select {
-		case <-time.NewTimer(okexWsTimeout).C:
-			if (time.Duration(time.Now().UnixNano()/1e6) - h.pongLastTime) > okexWsTimeout {
-				if w.WsConn != nil {
-					w.WsConn.Close()
-				}
+		case <-time.NewTimer(time.Second * time.Duration(okexWsTimeout)).C:
+			if (time.Now().Unix() - h.pongLastTime) > okexWsPingTimeout {
+				log.Printf("%s pingpong断线", OkEx)
+				w.closeRedialSub()
 			} else {
-				if w.WsConn != nil {
-					w.WsConn.WriteMessage(websocket.TextMessage, []byte("ping"))
-				}
+				w.WsConn.WriteMessage(websocket.TextMessage, []byte("ping"))
 			}
 		}
 	}
@@ -118,7 +117,8 @@ func (h *okexHandler) marketerMsg(msg []byte) (*Marketer, error) {
 		return nil, errors.New("序列化市场深度错误")
 	}
 
-	h.pongLastTime = time.Duration(okexData.Data[0].Timestamp.UnixNano() / 1e6)
+	//okex重连以后, 不会主动pong
+	h.pongLastTime = time.Now().Unix()
 	return h.newMarketer(okexData)
 }
 
@@ -138,7 +138,7 @@ func (h *okexHandler) newMarketer(p *okexProvider) (*Marketer, error) {
 //验证是否是pong数据
 func (h *okexHandler) pongMsg(msg []byte) {
 	if string(msg) == "pong" {
-		h.pongLastTime = time.Duration(time.Now().UnixNano() / 1e6)
+		h.pongLastTime = time.Now().Unix()
 	}
 }
 

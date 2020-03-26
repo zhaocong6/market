@@ -3,6 +3,8 @@ package market
 import (
 	"context"
 	"github.com/gorilla/websocket"
+	"github.com/zhaocong6/goUtils/chanlock"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -36,6 +38,8 @@ type (
 		Subscribes       map[string][]byte //订阅成功数据
 		List             Lister            //订阅成功返回后的行情数据list
 		handler          Handler           //handel接口
+		redialLock       chanlock.ChanLock //重连并发锁
+		lastRedialTime   int64             //最后一次重连时间
 	}
 
 	coJob struct {
@@ -49,8 +53,12 @@ type (
 //ws连接
 //数据监听
 func (w *Worker) RunTask() {
+	log.Printf("%s 服务启动", w.Organize)
 	w.WsConn, _ = dial(w.wsUrl)
-	defer w.WsConn.Close()
+	defer func() {
+		w.WsConn.Close()
+		log.Printf("%s 服务关闭", w.Organize)
+	}()
 
 	w.listenHandle()
 }
@@ -59,6 +67,8 @@ func (w *Worker) RunTask() {
 //失败后3秒重新连接
 //直到连接成功
 func dial(u string) (*websocket.Conn, error) {
+	log.Printf("%s 连接中.", u)
+
 RETRY:
 	uProxy, _ := url.Parse("http://127.0.0.1:12333")
 
@@ -73,6 +83,7 @@ RETRY:
 		goto RETRY
 	}
 
+	log.Printf("%s 连接成功.", u)
 	return conn, nil
 }
 
@@ -92,9 +103,23 @@ func (w *Worker) Subscribe(msg []byte) error {
 //重新创建一个连接
 //发送订阅
 func (w *Worker) closeRedialSub() error {
+	if w.redialLock.TryLock(time.Millisecond) == false {
+		return nil
+	}
+
+	defer func() {
+		w.lastRedialTime = time.Now().Unix()
+		w.redialLock.Unlock()
+	}()
+
+	if (time.Now().Unix() - w.lastRedialTime) < 10 {
+		return nil
+	}
+
+	log.Printf("%s 断线重连", w.Organize)
+
 	var err error
 	w.WsConn.Close()
-	w.WsConn = nil
 	w.WsConn, err = dial(w.wsUrl)
 
 	for k, v := range w.Subscribes {
@@ -147,22 +172,14 @@ func (w *Worker) listenHandle() {
 			return
 		default:
 			//等待ws数据
-			if w.WsConn == nil {
-				time.Sleep(time.Millisecond * 200)
-				break
-			}
-
 			msgType, msg, err := w.WsConn.ReadMessage()
 			if err != nil {
 				err = w.closeRedialSub()
 				if err != nil {
 					return
 				}
-
-				msgType, msg, err = w.WsConn.ReadMessage()
-				if err != nil {
-					return
-				}
+				time.Sleep(time.Second)
+				continue
 			}
 
 			Manage.pool.Put(&coJob{

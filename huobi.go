@@ -5,24 +5,27 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/gorilla/websocket"
+	"log"
 	"strings"
 	"time"
 )
 
 var huoBiUrl = "wss://api.huobi.pro/ws"
 
-const huobiWsTimeout = time.Second * 30
-const huobiWsPingTimeout = time.Second * 3
+const huobiWsTimeout int64 = 3
+const huobiWsPingTimeout int64 = 10
 
 type huoBiHandler struct {
-	pingLastTime time.Duration
+	pingLastTime int64
 }
 
 func newHuoBi(ctx context.Context) *Worker {
 	return &Worker{
-		ctx:              ctx,
-		wsUrl:            huoBiUrl,
-		handler:          &huoBiHandler{},
+		ctx:   ctx,
+		wsUrl: huoBiUrl,
+		handler: &huoBiHandler{
+			pingLastTime: time.Now().Unix(),
+		},
 		Organize:         HuoBi,
 		Status:           runIng,
 		Subscribes:       make(map[string][]byte),
@@ -61,22 +64,18 @@ func (h *huoBiHandler) subscribed(msg []byte, w *Worker) {
 func (h *huoBiHandler) pingPongHandle(w *Worker) {
 	for {
 		select {
-		case <-time.NewTimer(huobiWsPingTimeout).C:
-			now := time.Duration(time.Now().UnixNano() / 1e6)
-
-			if (now - h.pingLastTime) > huobiWsTimeout {
-				if w.WsConn != nil {
-					w.WsConn.Close()
-				}
-			} else if (now - h.pingLastTime) > huobiWsPingTimeout {
+		case <-time.NewTimer(time.Second * time.Duration(huobiWsTimeout)).C:
+			if (time.Now().Unix() - h.pingLastTime) > huobiWsPingTimeout {
+				log.Printf("%s pingpong断线", HuoBi)
+				w.closeRedialSub()
+			} else {
 				pong, _ := json.Marshal(struct {
-					pong time.Duration
+					Pong time.Duration `json:"pong"`
 				}{
-					pong: now,
+					Pong: time.Duration(time.Now().UnixNano() / 1e6),
 				})
-				if w.WsConn != nil {
-					w.WsConn.WriteMessage(websocket.TextMessage, pong)
-				}
+
+				w.WsConn.WriteMessage(websocket.TextMessage, pong)
 			}
 		}
 	}
@@ -159,6 +158,6 @@ func (h *huoBiHandler) pongMsg(msg []byte) {
 	huobiPing := &huobiPing{}
 	json.Unmarshal(msg, huobiPing)
 	if huobiPing.Ping != 0 {
-		h.pingLastTime = time.Duration(time.Now().UnixNano() / 1e6)
+		h.pingLastTime = time.Now().Unix()
 	}
 }

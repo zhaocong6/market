@@ -2,8 +2,9 @@ package market
 
 import (
 	"context"
-	"fmt"
 	"github.com/zhaocong6/goUtils/goroutinepool"
+	"log"
+	"runtime/debug"
 )
 
 //manage结构体
@@ -21,7 +22,7 @@ func init() {
 
 	Manage.pool = goroutinepool.NewPool(goroutinepool.Options{
 		Capacity:  20,
-		JobBuffer: 1000,
+		JobBuffer: 500,
 	})
 
 	Manage.Tasks = map[Organize]*Worker{}
@@ -37,7 +38,7 @@ func Run() {
 
 			defer func() {
 				if err := recover(); err != nil {
-					fmt.Println(err)
+					log.Println(err, string(debug.Stack()))
 				}
 			}()
 
@@ -49,7 +50,7 @@ func Run() {
 
 		defer func() {
 			if err := recover(); err != nil {
-				fmt.Println(err)
+				log.Println(err, string(debug.Stack()))
 			}
 		}()
 

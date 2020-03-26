@@ -1,10 +1,10 @@
 # market
-虚拟货币, 行情和深度业务
+    虚拟货币, 行情和深度业务
 ## 使用
-work_test.go
+    work_test.go
 ## 已完成功能
     ws断线重连
-    ws pingpong检测
+    ws 应用层pingpong检测
     行情数据过期gc机制
     行情数据环形推送
     行情数据被动获取
@@ -12,4 +12,4 @@ work_test.go
     ws响应数据并行处理
 ## 待完成
     行情数据过期gc, 重发机制
-    重连并发保护
+    
