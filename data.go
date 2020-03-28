@@ -90,11 +90,13 @@ func (l Lister) Find(s ...string) Lister {
 //exs单位是秒. 表示数据过期的时间
 //数据过期后删除
 func (l Lister) gc(exs time.Duration) {
+	listLock.Lock()
+	defer listLock.Unlock()
 	t := time.Duration(time.Now().UnixNano() / 1e6)
 
 	for k, v := range l {
 		if (t - v.Timestamp) > exs {
-			l.Del(k)
+			delete(l, k)
 		}
 	}
 }
