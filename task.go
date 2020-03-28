@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -36,6 +37,7 @@ type (
 		WsConn           *websocket.Conn   //ws连接
 		Subscribing      map[string][]byte //订阅中数据
 		Subscribes       map[string][]byte //订阅成功数据
+		subLock          sync.Mutex
 		List             Lister            //订阅成功返回后的行情数据list
 		handler          Handler           //handel接口
 		redialLock       chanlock.ChanLock //重连并发锁
@@ -122,6 +124,9 @@ func (w *Worker) closeRedialSub() error {
 	w.WsConn.Close()
 	w.WsConn, err = dial(w.wsUrl)
 
+	w.subLock.Lock()
+	defer w.subLock.Unlock()
+
 	for k, v := range w.Subscribes {
 		w.Subscribing[k] = v
 		delete(w.Subscribes, k)
@@ -133,12 +138,18 @@ func (w *Worker) closeRedialSub() error {
 //处理订阅数据格式
 //订阅
 func (w *Worker) subscribeHandle(s *Subscriber) {
+	w.subLock.Lock()
+	defer w.subLock.Unlock()
+
 	w.Subscribing[s.Symbol] = w.handler.formatSubscribeHandle(s)
 	w.Subscribe(w.Subscribing[s.Symbol])
 }
 
 //处理订阅成功
 func (w *Worker) subscribed(symbol string) {
+	w.subLock.Lock()
+	defer w.subLock.Unlock()
+
 	if sub, ok := w.Subscribing[symbol]; ok {
 		w.Subscribes[symbol] = sub
 		delete(w.Subscribing, symbol)
