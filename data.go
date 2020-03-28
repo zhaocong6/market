@@ -44,12 +44,12 @@ func (m *Marketer) MarshalJson() string {
 //主要为了实现主动查询
 type Lister map[string]*Marketer
 
-var listLock sync.Mutex
+var listLock sync.RWMutex
 
 //序列化为json
 func (l Lister) MarshalJson() string {
-	listLock.Lock()
-	defer listLock.Unlock()
+	listLock.RLock()
+	defer listLock.RUnlock()
 
 	j, _ := json.Marshal(l)
 	return string(j)
@@ -76,7 +76,8 @@ func (l Lister) Del(k string) {
 //返回一个新的lister结构体
 func (l Lister) Find(s ...string) Lister {
 	newL := make(Lister)
-
+	listLock.RLock()
+	listLock.RUnlock()
 	for _, k := range s {
 		if v, ok := l[k]; ok {
 			newL[k] = v
@@ -92,8 +93,8 @@ func (l Lister) Find(s ...string) Lister {
 func (l Lister) gc(exs time.Duration) {
 	listLock.Lock()
 	defer listLock.Unlock()
-	t := time.Duration(time.Now().UnixNano() / 1e6)
 
+	t := time.Duration(time.Now().UnixNano() / 1e6)
 	for k, v := range l {
 		if (t - v.Timestamp) > exs {
 			delete(l, k)
