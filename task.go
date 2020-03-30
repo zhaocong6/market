@@ -209,7 +209,7 @@ func (w *Worker) workerListGc() {
 	for {
 		select {
 		case <-time.NewTimer(workerListGcTime * time.Second).C:
-			w.List.gc(workerListGcTime)
+			w.List.gc(workerListGcTime * time.Second)
 		}
 	}
 }
