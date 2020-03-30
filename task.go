@@ -37,7 +37,7 @@ type (
 		Subscribing      map[string][]byte //订阅中数据
 		Subscribes       map[string][]byte //订阅成功数据
 		subLock          sync.Mutex
-		List             Lister            //订阅成功返回后的行情数据list
+		List             *Lister           //订阅成功返回后的行情数据list
 		handler          Handler           //handel接口
 		redialLock       chanlock.ChanLock //重连并发锁
 		lastRedialTime   int64             //最后一次重连时间
@@ -108,7 +108,10 @@ func (w *Worker) closeRedialSub() error {
 	}
 
 	defer func() {
-		w.lastRedialTime = time.Now().Unix()
+		if w.lastRedialTime != 0 {
+			w.lastRedialTime = time.Now().Unix()
+		}
+
 		w.redialLock.Unlock()
 	}()
 
@@ -120,6 +123,7 @@ func (w *Worker) closeRedialSub() error {
 
 	var err error
 	w.WsConn.Close()
+	w.lastRedialTime = time.Now().Unix()
 	w.WsConn, err = dial(w.wsUrl)
 
 	w.subLock.Lock()

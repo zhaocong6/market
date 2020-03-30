@@ -12,7 +12,7 @@ func TestMarketer_MarshalJson(t *testing.T) {
 }
 
 func TestLister_Del(t *testing.T) {
-	l := make(Lister)
+	l := &Lister{}
 	l.Add("btc", NewTestMarketer())
 	l.Add("usdt", NewTestMarketer())
 	l.Del("usdt")
@@ -20,15 +20,15 @@ func TestLister_Del(t *testing.T) {
 }
 
 func TestLister_Find(t *testing.T) {
-	l := make(Lister)
+	l := &Lister{}
 	l.Add("btc", NewTestMarketer())
 	l.Add("usdt", NewTestMarketer())
 	newL := l.Find("a")
-	fmt.Println(newL.MarshalJson())
+	fmt.Println(newL)
 }
 
 func TestLister_MarshalJson(t *testing.T) {
-	l := make(Lister)
+	l := &Lister{}
 	l.Add("btc", NewTestMarketer())
 	l.Add("usdt", NewTestMarketer())
 	fmt.Println(l.MarshalJson())

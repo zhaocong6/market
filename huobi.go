@@ -32,7 +32,7 @@ func newHuoBi(ctx context.Context) *Worker {
 		Subscribing:      make(map[string][]byte),
 		LastRunTimestamp: time.Duration(time.Now().UnixNano() / 1e6),
 		WsConn:           nil,
-		List:             Lister{},
+		List:             newList(),
 	}
 }
 

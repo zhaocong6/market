@@ -42,62 +42,70 @@ func (m *Marketer) MarshalJson() string {
 
 //基础的lister类型
 //主要为了实现主动查询
-type Lister map[string]*Marketer
+type Lister struct {
+	data map[string]*Marketer
+	lock sync.RWMutex
+}
 
-var listLock sync.RWMutex
+func newList() *Lister {
+	return &Lister{
+		data: make(map[string]*Marketer),
+	}
+}
 
 //序列化为json
-func (l Lister) MarshalJson() string {
-	listLock.RLock()
-	defer listLock.RUnlock()
+func (l *Lister) MarshalJson() string {
+	l.lock.RLock()
+	defer l.lock.RUnlock()
 
-	j, _ := json.Marshal(l)
+	j, _ := json.Marshal(l.data)
 	return string(j)
 }
 
 //追加一条数据
 //如果数据已经存在, 则更新数据
-func (l Lister) Add(k string, m *Marketer) {
-	listLock.Lock()
-	defer listLock.Unlock()
-
-	l[k] = m
+func (l *Lister) Add(k string, m *Marketer) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	l.data[k] = m
 }
 
 //删除一条数据
-func (l Lister) Del(k string) {
-	listLock.Lock()
-	defer listLock.Unlock()
+func (l *Lister) Del(k string) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
 
-	delete(l, k)
+	delete(l.data, k)
 }
 
 //查找一个或者多个key
 //返回一个新的lister结构体
-func (l Lister) Find(s ...string) Lister {
-	newL := make(Lister)
-	listLock.RLock()
-	listLock.RUnlock()
+func (l *Lister) Find(s ...string) *Lister {
+	l.lock.RLock()
+	defer l.lock.RUnlock()
+
+	newL := newList()
 	for _, k := range s {
-		if v, ok := l[k]; ok {
-			newL[k] = v
+		if v, ok := l.data[k]; ok {
+			newL.data[k] = v
 		}
 	}
 
 	return newL
 }
 
+func (l *Lister) toMap() map[string]*Marketer {
+	return l.data
+}
+
 //lister gc机制
 //exs单位是秒. 表示数据过期的时间
 //数据过期后删除
-func (l Lister) gc(exs time.Duration) {
-	listLock.Lock()
-	defer listLock.Unlock()
-
+func (l *Lister) gc(exs time.Duration) {
 	t := time.Duration(time.Now().UnixNano() / 1e6)
-	for k, v := range l {
+	for k, v := range l.data {
 		if (t - v.Timestamp) > exs {
-			delete(l, k)
+			l.Del(k)
 		}
 	}
 }
@@ -185,6 +193,5 @@ func (w writeMarketer) writeRingBuffer(m *Marketer) {
 		default:
 		}
 	}
-
 	w.buffer <- m
 }
