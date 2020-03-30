@@ -94,7 +94,7 @@ func (l *Lister) Find(s ...string) *Lister {
 	return newL
 }
 
-func (l *Lister) toMap() map[string]*Marketer {
+func (l *Lister) ToMap() map[string]*Marketer {
 	return l.data
 }
 
