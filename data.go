@@ -103,9 +103,11 @@ func (l *Lister) ToMap() map[string]*Marketer {
 //数据过期后删除
 func (l *Lister) gc(exs time.Duration) {
 	t := time.Duration(time.Now().UnixNano() / 1e6)
+	l.lock.Lock()
+	defer l.lock.Unlock()
 	for k, v := range l.data {
 		if (t - v.Timestamp) > exs {
-			l.Del(k)
+			delete(l.data, k)
 		}
 	}
 }
