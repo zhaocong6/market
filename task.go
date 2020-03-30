@@ -6,7 +6,6 @@ import (
 	"github.com/zhaocong6/goUtils/chanlock"
 	"log"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 )
@@ -65,6 +64,11 @@ func (w *Worker) RunTask() {
 	w.listenHandle()
 }
 
+var DefaultDialer = &websocket.Dialer{
+	Proxy:            http.ProxyFromEnvironment,
+	HandshakeTimeout: 10 * time.Second,
+}
+
 //ws连接
 //失败后3秒重新连接
 //直到连接成功
@@ -72,16 +76,10 @@ func dial(u string) (*websocket.Conn, error) {
 	log.Printf("%s 连接中.", u)
 
 RETRY:
-	uProxy, _ := url.Parse("http://127.0.0.1:12333")
-
-	websocket.DefaultDialer = &websocket.Dialer{
-		Proxy:            http.ProxyURL(uProxy),
-		HandshakeTimeout: 10 * time.Second,
-	}
-
-	conn, _, err := websocket.DefaultDialer.Dial(u, nil)
+	conn, _, err := DefaultDialer.Dial(u, nil)
 	if err != nil {
 		time.Sleep(time.Second * 3)
+		log.Println(err)
 		goto RETRY
 	}
 
