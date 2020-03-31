@@ -11,7 +11,7 @@ import (
 //用于管理task任务, 和关闭task运行任务
 //使用context通信
 var Manage struct {
-	Tasks  map[Organize]*Worker
+	tasks  map[Organize]*Worker
 	Ctx    context.Context
 	Cancel context.CancelFunc
 	pool   *goroutinepool.Worker
@@ -25,14 +25,14 @@ func init() {
 		JobBuffer: 500,
 	})
 
-	Manage.Tasks = map[Organize]*Worker{}
-	Manage.Tasks[OkEx] = newOkEx(Manage.Ctx)
-	Manage.Tasks[HuoBi] = newHuoBi(Manage.Ctx)
+	Manage.tasks = map[Organize]*Worker{}
+	Manage.tasks[OkEx] = newOkEx(Manage.Ctx)
+	Manage.tasks[HuoBi] = newHuoBi(Manage.Ctx)
 }
 
 //运行work
 func Run() {
-	for _, t := range Manage.Tasks {
+	for _, t := range Manage.tasks {
 
 		go func(t *Worker) {
 
@@ -64,12 +64,22 @@ func Close() {
 	Manage.Cancel()
 }
 
+func Find(organize string, symbol ...string) (m map[string]*Marketer) {
+	switch organize {
+	case "huobi":
+		m = Manage.tasks[HuoBi].List.Find(symbol...).ToMap()
+	case "okex":
+		m = Manage.tasks[OkEx].List.Find(symbol...).ToMap()
+	}
+	return m
+}
+
 //订阅请求统一处理
 func subscribeHandle() {
 	for {
 		select {
 		case sub := <-readSubscribing:
-			Manage.Tasks[sub.Organize].subscribeHandle(sub)
+			Manage.tasks[sub.Organize].subscribeHandle(sub)
 		}
 	}
 }
