@@ -113,19 +113,19 @@ func (l *Lister) gc(exs time.Duration) {
 }
 
 //交易类型
-type marketType int
+type MarketType int
 
 //币币交易/现货交易类型
-const SpotMarket marketType = 1
+const SpotMarket MarketType = 1
 
 //期货交易/交割交易类型
-const FuturesMarket marketType = 2
+const FuturesMarket MarketType = 2
 
 //永续交易类型
-const WapMarket marketType = 3
+const WapMarket MarketType = 3
 
 //期权交易类型
-const OptionMarket marketType = 4
+const OptionMarket MarketType = 4
 
 //平台常量类型
 type Organize string
@@ -140,7 +140,7 @@ const OkEx Organize = "okex"
 type Subscriber struct {
 	Symbol     string
 	Organize   Organize
-	MarketType marketType
+	MarketType MarketType
 }
 
 //只允许写入Subscriber channel
