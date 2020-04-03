@@ -40,7 +40,6 @@ type (
 		List             *Lister           //订阅成功返回后的行情数据list
 		handler          Handler           //handel接口
 		redialLock       chanlock.ChanLock //重连并发锁
-		lastRedialTime   int64             //最后一次重连时间
 	}
 
 	coJob struct {
@@ -108,22 +107,13 @@ func (w *Worker) closeRedialSub() error {
 	}
 
 	defer func() {
-		if w.lastRedialTime != 0 {
-			w.lastRedialTime = time.Now().Unix()
-		}
-
 		w.redialLock.Unlock()
 	}()
-
-	if (time.Now().Unix() - w.lastRedialTime) < 10 {
-		return nil
-	}
 
 	log.Printf("%s 断线重连", w.Organize)
 
 	var err error
 	w.WsConn.Close()
-	w.lastRedialTime = time.Now().Unix()
 	w.WsConn, err = dial(w.wsUrl)
 
 	w.subLock.Lock()
