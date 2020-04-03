@@ -25,20 +25,20 @@ func (d Depth) formatFloat(params [][2]float64) Depth {
 
 //基础行情结构
 type Marketer struct {
-	Organize  Organize      `json:"organize"`   //交易所
-	Symbol    string        `json:"symbol"`     //订阅币对
-	BuyFirst  string        `json:"buy_first"`  //买一价格
-	SellFirst string        `json:"sell_first"` //卖一价格
-	BuyDepth  Depth         `json:"buy_depth"`  //市场买深度
-	SellDepth Depth         `json:"sell_depth"` //市场卖深度
-	Timestamp time.Duration `json:"timestamp"`  //数据更新时间(毫秒)
-	Temporize time.Duration `json:"temporize"`  //网络延迟(毫秒)
+	Organize  Organize      `json:"organize"`             //交易所
+	Symbol    string        `json:"symbol"`               //订阅币对
+	BuyFirst  string        `json:"buy_first,omitempty"`  //买一价格
+	SellFirst string        `json:"sell_first,omitempty"` //卖一价格
+	BuyDepth  Depth         `json:"buy_depth,omitempty"`  //市场买深度
+	SellDepth Depth         `json:"sell_depth,omitempty"` //市场卖深度
+	Timestamp time.Duration `json:"timestamp,omitempty"`  //数据更新时间(毫秒)
+	Temporize time.Duration `json:"temporize,omitempty"`  //网络延迟(毫秒)
 }
 
 //序列化为json
-func (m *Marketer) MarshalJson() string {
+func (m *Marketer) MarshalJson() []byte {
 	j, _ := json.Marshal(m)
-	return string(j)
+	return j
 }
 
 //基础的lister类型
