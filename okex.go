@@ -65,7 +65,7 @@ func (h *okexHandler) pingPongHandle(w *Worker) {
 				log.Printf("%s pingpong断线", OkEx)
 				w.closeRedialSub()
 			} else {
-				w.WsConn.WriteMessage(websocket.TextMessage, []byte("ping"))
+				w.writeMessage(websocket.TextMessage, []byte("ping"))
 			}
 		}
 	}

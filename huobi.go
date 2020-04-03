@@ -75,7 +75,7 @@ func (h *huoBiHandler) pingPongHandle(w *Worker) {
 					Pong: time.Duration(time.Now().UnixNano() / 1e6),
 				})
 
-				w.WsConn.WriteMessage(websocket.TextMessage, pong)
+				w.writeMessage(websocket.TextMessage, pong)
 			}
 		}
 	}

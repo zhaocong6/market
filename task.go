@@ -40,6 +40,7 @@ type (
 		List             *Lister           //订阅成功返回后的行情数据list
 		handler          Handler           //handel接口
 		redialLock       chanlock.ChanLock //重连并发锁
+		wsWriteLock      sync.Mutex        //msg写入并发锁
 	}
 
 	coJob struct {
@@ -86,10 +87,17 @@ RETRY:
 	return conn, nil
 }
 
+func (w *Worker) writeMessage(messageType int, data []byte) error {
+	w.wsWriteLock.Lock()
+	defer w.wsWriteLock.Unlock()
+
+	return w.WsConn.WriteMessage(messageType, data)
+}
+
 //发送订阅
 func (w *Worker) Subscribe(msg []byte) error {
 	if w.WsConn != nil {
-		err := w.WsConn.WriteMessage(websocket.TextMessage, msg)
+		err := w.writeMessage(websocket.TextMessage, msg)
 		if err != nil {
 			return err
 		}
