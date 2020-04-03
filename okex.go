@@ -14,7 +14,7 @@ const okexUrl = "wss://real.OKEx.com:8443/ws/v3"
 
 //ws连接超时时间
 //超过这个时间 服务器没有ping或者pong 将断开重连
-const okexWsTimeout int64 = 3
+const okexPingCheck int64 = 5
 const okexWsPingTimeout int64 = 10
 
 //记录okex服务器最后pong时间
@@ -60,7 +60,7 @@ func (h *okexHandler) formatSubscribeHandle(s *Subscriber) (b []byte) {
 func (h *okexHandler) pingPongHandle(w *Worker) {
 	for {
 		select {
-		case <-time.NewTimer(time.Second * time.Duration(okexWsTimeout)).C:
+		case <-time.NewTimer(time.Second * time.Duration(okexPingCheck)).C:
 			if (time.Now().Unix() - h.pongLastTime) > okexWsPingTimeout {
 				log.Printf("%s pingpong断线", OkEx)
 				w.closeRedialSub()

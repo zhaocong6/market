@@ -12,7 +12,7 @@ import (
 
 var huoBiUrl = "wss://api.huobi.pro/ws"
 
-const huobiWsTimeout int64 = 3
+const huobiPingCheck int64 = 5
 const huobiWsPingTimeout int64 = 10
 
 type huoBiHandler struct {
@@ -64,7 +64,7 @@ func (h *huoBiHandler) subscribed(msg []byte, w *Worker) {
 func (h *huoBiHandler) pingPongHandle(w *Worker) {
 	for {
 		select {
-		case <-time.NewTimer(time.Second * time.Duration(huobiWsTimeout)).C:
+		case <-time.NewTimer(time.Second * time.Duration(huobiPingCheck)).C:
 			if (time.Now().Unix() - h.pingLastTime) > huobiWsPingTimeout {
 				log.Printf("%s pingpong断线", HuoBi)
 				w.closeRedialSub()
