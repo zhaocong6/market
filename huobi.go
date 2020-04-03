@@ -147,6 +147,7 @@ func (h *huoBiHandler) newMarketer(p *huobiProvider) (*Marketer, error) {
 		BuyDepth:  p.Tick.bidsDepth,
 		SellDepth: p.Tick.asksDepth,
 		Timestamp: p.Timestamp,
+		Temporize: time.Duration(time.Now().UnixNano()/1e6) - p.Timestamp,
 	}, nil
 }
 

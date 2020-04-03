@@ -124,6 +124,8 @@ func (h *okexHandler) marketerMsg(msg []byte) (*Marketer, error) {
 
 //将深度数据转换成统一的行情数据
 func (h *okexHandler) newMarketer(p *okexProvider) (*Marketer, error) {
+	timestamp := time.Duration(p.Data[0].Timestamp.UnixNano() / 1e6)
+
 	return &Marketer{
 		Organize:  OkEx,
 		Symbol:    p.Data[0].InstrumentId,
@@ -131,7 +133,8 @@ func (h *okexHandler) newMarketer(p *okexProvider) (*Marketer, error) {
 		SellFirst: p.Data[0].Asks[0][0],
 		BuyDepth:  p.Data[0].Bids,
 		SellDepth: p.Data[0].Asks,
-		Timestamp: time.Duration(p.Data[0].Timestamp.UnixNano() / 1e6),
+		Timestamp: timestamp,
+		Temporize: time.Duration(time.Now().UnixNano()/1e6) - timestamp,
 	}, nil
 }
 

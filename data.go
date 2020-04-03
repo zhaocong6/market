@@ -32,6 +32,7 @@ type Marketer struct {
 	BuyDepth  Depth         `json:"buy_depth"`  //市场买深度
 	SellDepth Depth         `json:"sell_depth"` //市场卖深度
 	Timestamp time.Duration `json:"timestamp"`  //数据更新时间(毫秒)
+	Temporize time.Duration `json:"temporize"`  //网络延迟(毫秒)
 }
 
 //序列化为json
